@@ -2,8 +2,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class Resource {
     public final String hash;
