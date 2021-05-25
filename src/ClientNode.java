@@ -54,18 +54,24 @@ public class ClientNode {
                         System.out.println("Received hello from " + mmf.sender);
                         if (superNode.isEmpty()) {
                             superNode = mmf.sender;
-                            System.out.println("Sending back a hello");
-                            controller.send(CLIENT_HELLO);
                             System.out.println("Connection with " + mmf.sender + " established.");
                         }
                         System.out.println();
                         break;
                     case CLIENT_HELLO:
+                    case CLIENT_EXIT:
                         break;
                     default:
                         System.out.println("Not expected input received:\n" + mmf.toString());
                 }
             } catch (Exception e) {
+            }
+            if (System.in.available() > 0) {
+                input = scanner.nextLine().trim().toUpperCase();
+                switch (input) {
+                    default:
+                        break;
+                }
             }
         }
     }
