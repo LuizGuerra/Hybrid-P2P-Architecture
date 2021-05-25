@@ -17,7 +17,7 @@ public class SuperNode {
     MulticastController clientsNodeController;
 
     Set<String> superNodes;
-    Set<String> clientNodes;
+    Set<Tuple> clientNodes;
     List<Resource> clientResources;
 
     String name;
@@ -76,13 +76,12 @@ public class SuperNode {
                 switch (mmf.request) {
                     case CLIENT_HELLO:
                         System.out.println("Received client hello from " + mmf.sender);
-                        if (clientNodes.add(mmf.sender)) {
+                        if (clientNodes.add(new Tuple(mmf.sender, System.currentTimeMillis()))) {
                             clientResources.addAll(resources(mmf.body));
                             System.out.println("Sending back a hello");
                             clientsNodeController.send(HELLO);
                             System.out.println("Connection with " + mmf.sender + " established.");
                         }
-                        System.out.println(clientResources);
                         break;
                     case CLIENT_EXIT:
                         clientNodes.remove(mmf.sender);
