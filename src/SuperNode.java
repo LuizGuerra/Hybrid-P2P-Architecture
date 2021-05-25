@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class SuperNode {
 
@@ -12,6 +11,7 @@ public class SuperNode {
     static final String CLIENT_HELLO = "CLIENT_HELLO";
     static final String CLIENT_EXIT = "CLIENT_EXIT";
     static final String REQUEST_RESOURCES = "REQUEST_RESOURCES";
+    static final String COMMIT_RESOURCES = "COMMIT_RESOURCES";
 
     MulticastController superNodeController;
     MulticastController clientsNodeController;
@@ -40,7 +40,23 @@ public class SuperNode {
         System.out.println("Hello sent.\n");
         Scanner scanner = new Scanner(System.in);
         String input = "";
+
+        // Is waiting super node resources or request from other supernode
+        String askedForResources = "";
+        String resourceStrings = "";
+        int counter = 0;
+
+
         while (true) {
+            // If can send resources back to client
+            if (!askedForResources.isEmpty() && counter == superNodes.size()) {
+                System.out.println("\nReceived all resources. Sending package...");
+                clientsNodeController.send(COMMIT_RESOURCES, resourceStrings);
+                askedForResources = "";
+                resourceStrings = "";
+                counter = 0;
+                System.out.println("Resources package sent.\n");
+            }
             // Read if anything arrived from supernodes
             try {
                 String received = superNodeController.receive();
@@ -61,10 +77,24 @@ public class SuperNode {
                     case EXIT:
                         superNodes.remove(mmf.sender);
                         break;
+                    case REQUEST_RESOURCES:
+                        System.out.println("\nReceived super node resource request");
+                        superNodeController.send(
+                                COMMIT_RESOURCES,
+                                MulticastMessageFormat.resourceToString(clientResources)
+                        );
+                        break;
+                    case COMMIT_RESOURCES:
+                        if(!askedForResources.isEmpty()) {
+                            System.out.println("Received resources from super node " + mmf.sender);
+                            resourceStrings += " " + mmf.body;
+                            counter++;
+                        }
+                        break;
                     default:
-                        System.out.println("Not expected input received:\n" + mmf.toString());
+                        System.out.println("Not expected input received:\n" + mmf);
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
             // Read if anything arrived from clients
             try {
@@ -88,22 +118,26 @@ public class SuperNode {
                         System.out.println("Removed client " + mmf.sender);
                         break;
                     case REQUEST_RESOURCES:
+                        if (mmf.sender.equals(askedForResources)) {
+                            break;
+                        }
+                        System.out.println("Client " + mmf.sender + " requested resources");
+                        superNodeController.send(REQUEST_RESOURCES);
+                        System.out.println(clientResources);
+                        resourceStrings = MulticastMessageFormat.resourceToString(clientResources);
+                        askedForResources = mmf.sender;
                         break;
                     default:
-                        System.out.println("Not expected input received:\n" + mmf.toString());
+                        System.out.println("Not expected input received:\n" + mmf);
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
             if (System.in.available() > 0) {
                 input = scanner.nextLine().trim().toUpperCase();
-                switch (input) {
-                    case EXIT:
-                        superNodeController.send(EXIT);
-                        break;
+                if (EXIT.equals(input)) {
+                    superNodeController.send(EXIT);
+                    break;
                 }
-            }
-            if (input.equals(EXIT)) {
-                break;
             }
         }
         superNodeController.end();
@@ -111,9 +145,7 @@ public class SuperNode {
     }
 
     public List<Resource> resources(String body) {
-        return Arrays.stream(body.split("\\s"))
-                .map(Resource::parseString)
-                .collect(Collectors.toList());
+        return MulticastMessageFormat.stringToResource(body);
     }
 
     public static void main(String[] args) throws IOException {

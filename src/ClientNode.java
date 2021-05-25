@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -12,9 +13,12 @@ import java.util.stream.Stream;
 public class ClientNode {
 
     static final String HELLO = "HELLO";
+    static final String EXIT = "EXIT";
+
     static final String CLIENT_HELLO = "CLIENT_HELLO";
     static final String CLIENT_EXIT = "CLIENT_EXIT";
     static final String REQUEST_RESOURCES = "REQUEST_RESOURCES";
+    static final String COMMIT_RESOURCES = "COMMIT_RESOURCES";
 
     String ip = InetAddress.getLocalHost().getHostAddress();
 
@@ -30,7 +34,9 @@ public class ClientNode {
     }
 
     public void run() throws IOException {
-        System.out.println("Send EXIT to exit.\n");
+        System.out.println("Usage:");
+        System.out.println("Send EXIT to exit.");
+        System.out.println("Send R to ask for all resources.\n");
 
         String input = "";
         String superNode = "";
@@ -41,57 +47,73 @@ public class ClientNode {
         System.out.println("Hello sent.\n");
         Scanner scanner = new Scanner(System.in);
 
+        boolean wantResources = false;
+
         while (true) {
             // Read if anything arrived
             try {
                 String received = controller.receive();
                 MulticastMessageFormat mmf = new MulticastMessageFormat(received);
-                if (mmf.sender.equals(name)) {
+                // If we already have our super node
+                // or if message coming is not from supernode
+                if (!superNode.isEmpty() || !mmf.sender.equals(superNode)) {
                     continue;
                 }
                 switch (mmf.request) {
                     case HELLO:
                         System.out.println("Received hello from " + mmf.sender);
-                        if (superNode.isEmpty()) {
-                            superNode = mmf.sender;
-                            System.out.println("Connection with " + mmf.sender + " established.");
-                        }
+                        superNode = mmf.sender;
+                        System.out.println("Connection with " + mmf.sender + " established.");
                         System.out.println();
                         break;
                     case CLIENT_HELLO:
                     case CLIENT_EXIT:
                         break;
+                    case REQUEST_RESOURCES:
+                        System.out.println("Received resources request");
+                        controller.send(COMMIT_RESOURCES, MulticastMessageFormat.resourceToString(localResources));
+                    case COMMIT_RESOURCES:
+                        if(wantResources) {
+                            System.out.println("Received all resources from supernode:");
+                            MulticastMessageFormat.stringToResource(mmf.body).forEach(System.out::println);
+                        }
                     default:
-                        System.out.println("Not expected input received:\n" + mmf.toString());
+                        System.out.println("Not expected input received:\n" + mmf);
                 }
-            } catch (Exception e) {
+            } catch (Exception ignored) {
             }
             if (System.in.available() > 0) {
                 input = scanner.nextLine().trim().toUpperCase();
                 switch (input) {
+                    case EXIT:
+                        System.out.println("Exiting...");
+                        controller.send(CLIENT_EXIT);
+                        break;
+                    case "R":
+                        System.out.println("Requesting resources to super node.");
+                        controller.send(REQUEST_RESOURCES);
+                        System.out.println("Request successful");
+                        wantResources = true;
                     default:
                         break;
                 }
             }
+            if (input.equals(EXIT)) {
+                break;
+            }
         }
+        controller.end();
+        scanner.close();
     }
 
     private String convertToString(List<Resource> resources) {
-        String str = "";
-        for(int i = 0; i < resources.size(); i++) {
-            if(i == resources.size() - 1) {
-                str += resources.get(i).convertForMulticast();
-            } else {
-                str += resources.get(i).convertForMulticast() + " ";
-            }
-        }
-        return str;
+        return MulticastMessageFormat.resourceToString(resources);
     }
 
     private List<Resource> getResources() {
         try (Stream<Path> walk = Files.walk(Paths.get(System.getProperty("user.dir")))) {
             return walk.filter(Files::isRegularFile)
-                    .map(x -> x.toString())
+                    .map(Path::toString)
                     .map(x -> {
                         try {
                             return new Resource(x, ip);
@@ -99,7 +121,7 @@ public class ClientNode {
                             return null;
                         }
                     })
-                    .filter(x -> x != null)
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toList());
         } catch (Exception e) {
             return new ArrayList<>();
