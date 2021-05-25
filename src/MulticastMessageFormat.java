@@ -1,4 +1,4 @@
-public class MulticastMessageFormat {
+final public class MulticastMessageFormat {
     public final String request;
     public final String sender;
     public final String body;
