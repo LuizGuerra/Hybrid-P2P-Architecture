@@ -14,6 +14,7 @@ public class ClientNode {
     static final String HELLO = "HELLO";
     static final String CLIENT_HELLO = "CLIENT_HELLO";
     static final String CLIENT_EXIT = "CLIENT_EXIT";
+    static final String CLIENT_ALIVE = "CLIENT_ALIVE";
     static final String REQUEST_RESOURCES = "REQUEST_RESOURCES";
 
     String ip = InetAddress.getLocalHost().getHostAddress();

@@ -11,13 +11,14 @@ public class SuperNode {
     // Client and super node communication
     static final String CLIENT_HELLO = "CLIENT_HELLO";
     static final String CLIENT_EXIT = "CLIENT_EXIT";
+    static final String CLIENT_ALIVE = "CLIENT_ALIVE";
     static final String REQUEST_RESOURCES = "REQUEST_RESOURCES";
 
     MulticastController superNodeController;
     MulticastController clientsNodeController;
 
     Set<String> superNodes;
-    Set<Tuple> clientNodes;
+    Set<ClientInfo> clientNodes;
     List<Resource> clientResources;
 
     String name;
@@ -70,13 +71,13 @@ public class SuperNode {
             try {
                 String received = clientsNodeController.receive();
                 MulticastMessageFormat mmf = new MulticastMessageFormat(received);
-                if (mmf.sender.equals(name)) {
+                if (mmf.sender.equals(name) || !containsClient(name)) {
                     continue;
                 }
                 switch (mmf.request) {
                     case CLIENT_HELLO:
                         System.out.println("Received client hello from " + mmf.sender);
-                        if (clientNodes.add(new Tuple(mmf.sender, System.currentTimeMillis()))) {
+                        if (addClient(mmf.sender)) {
                             clientResources.addAll(resources(mmf.body));
                             System.out.println("Sending back a hello");
                             clientsNodeController.send(HELLO);
@@ -84,13 +85,22 @@ public class SuperNode {
                         }
                         break;
                     case CLIENT_EXIT:
-                        clientNodes.remove(mmf.sender);
+                        removeFromClients(mmf.sender);
                         System.out.println("Removed client " + mmf.sender);
                         break;
+                    case CLIENT_ALIVE:
+                        clientSentMessage(mmf.sender, System.currentTimeMillis());
                     case REQUEST_RESOURCES:
                         break;
                     default:
                         System.out.println("Not expected input received:\n" + mmf.toString());
+                }
+                // Remove client if it does not send messages after 5 seconds
+                for (ClientInfo client : clientNodes) {
+                    long currentTime = System.currentTimeMillis();
+                    if (client.lastMessageTime - currentTime > 5_000) {
+                        clientNodes.remove(client);
+                    }
                 }
             } catch (Exception e) {
             }
@@ -127,5 +137,47 @@ public class SuperNode {
         int clientPort = Integer.parseInt(args[2]);
         SuperNode node = new SuperNode(args[0], args[1], clientPort);
         node.run();
+    }
+
+    private void clientSentMessage(String name, long time) {
+        for (ClientInfo client: clientNodes) {
+            if (client.name.equals(name)) {
+                client.lastMessageTime = time;
+            }
+        }
+    }
+
+    private boolean containsClient(String name) {
+        for (ClientInfo client: clientNodes) {
+            if (client.name.equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean addClient(String name) {
+        long currentTime = System.currentTimeMillis();
+        boolean isNewClient = false;
+        for (ClientInfo client: clientNodes) {
+            if (client.name.equals(name)) {
+                client.lastMessageTime = currentTime;
+            } else {
+                clientNodes.add(new ClientInfo(name, currentTime));
+                isNewClient = true;
+            }
+        }
+        return isNewClient;
+    }
+
+    private void removeFromClients(String name/*, String ip*/) {
+        boolean hasRemoved = clientNodes.removeIf(clientInfo -> {
+            return clientInfo.name.equals(name);
+        });
+        // if (hasRemoved) {
+        //   clientResources.removeIf(resource -> {
+        //     return resource.ip.equals(ip);
+        //   });
+        // }
     }
 }
