@@ -158,19 +158,6 @@ public class SuperNode {
         return MulticastMessageFormat.stringToResource(body);
     }
 
-    public static void main(String[] args) throws IOException {
-        if (args.length != 3) {
-            System.out.println("Usage: java ClientNode <name> <group> <unique port>");
-            System.out.println("<name>: user name");
-            System.out.println("<group>: group unique number");
-            System.out.println("<unique port>: client communication port");
-            System.exit(1);
-        }
-        int clientPort = Integer.parseInt(args[2]);
-        SuperNode node = new SuperNode(args[0], args[1], clientPort);
-        node.run();
-    }
-
     private void clientSentMessage(String name, long time) {
         for (ClientInfo client: clientNodes) {
             if (client.name.equals(name)) {
@@ -211,5 +198,17 @@ public class SuperNode {
         //     return resource.ip.equals(ip);
         //   });
         // }
+    }
+
+    public static void main(String[] args) throws IOException {
+        if (args.length != 3) {
+            System.out.println("Usage: java ClientNode <name> <unique port>");
+            System.out.println("<name>: user name");
+            System.out.println("<unique port>: integer client communication port");
+            System.exit(1);
+        }
+        int clientPort = Integer.parseInt(args[2]);
+        SuperNode node = new SuperNode(args[0], "224.0.2.1", clientPort);
+        node.run();
     }
 }
