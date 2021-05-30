@@ -15,6 +15,7 @@ public class SuperNode {
     static final String EXIT = "EXIT";
     static final int superNodePort = 5000;
     Set<String> superNodes;
+    String superNodeGroup = "224.0.2.1";
 
     // Client and super node communication
     static final String CLIENT_HELLO = "CLIENT_HELLO";
@@ -25,10 +26,11 @@ public class SuperNode {
     int clientNodesPort;
     Set<ClientInfo> clientNodes;
     List<Resource> clientResources;
+    String clientNodeGroup = "224.0.2.2";
 
-    public SuperNode(String name, String group, int port) throws IOException {
-        this.superNodeController = new MulticastController(name, group, superNodePort);
-        this.clientsNodeController = new MulticastController(name, group, port);
+    public SuperNode(String name, int port) throws IOException {
+        this.superNodeController = new MulticastController(name, superNodeGroup, superNodePort);
+        this.clientsNodeController = new MulticastController(name, clientNodeGroup, port);
         this.superNodes = new HashSet<>();
         this.clientNodes = new HashSet<>();
         this.clientResources = new ArrayList<>();
@@ -198,8 +200,7 @@ public class SuperNode {
             System.exit(1);
         }
         int clientPort = Integer.parseInt(args[1]);
-        String group = "224.0.2.1";
-        SuperNode node = new SuperNode(args[0], group, clientPort);
+        SuperNode node = new SuperNode(args[0], clientPort);
         node.run();
     }
 }

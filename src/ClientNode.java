@@ -23,7 +23,7 @@ public class ClientNode {
 
     String ip = InetAddress.getLocalHost().getHostAddress();
 
-    String group = "224.0.2.1";
+    String group = "224.0.2.2";
     MulticastController controller;
     String name;
     int superNodePort;
