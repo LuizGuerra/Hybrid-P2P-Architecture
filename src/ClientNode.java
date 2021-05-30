@@ -44,7 +44,7 @@ public class ClientNode {
         List<Resource> localResources = getResources();
 
         System.out.println("Sending hello...");
-        controller.send(CLIENT_HELLO, convertToString(localResources));
+        controller.send(CLIENT_HELLO, localResources);
         System.out.println("Hello sent.\n");
         Scanner scanner = new Scanner(System.in);
 
@@ -56,8 +56,8 @@ public class ClientNode {
                 String received = controller.receive();
                 MulticastMessageFormat mmf = new MulticastMessageFormat(received);
                 // If we already have our super node
-                // or if message coming is not from supernode
-                if (!superNode.isEmpty() || !mmf.sender.equals(superNode)) {
+                // and if message coming is not from supernode
+                if (!superNode.isEmpty() && !mmf.sender.equals(superNode)) {
                     continue;
                 }
                 switch (mmf.request) {
@@ -69,18 +69,25 @@ public class ClientNode {
                         break;
                     case CLIENT_HELLO:
                     case CLIENT_EXIT:
-                        break;
                     case REQUEST_RESOURCES:
-                        System.out.println("Received resources request");
-                        controller.send(COMMIT_RESOURCES, MulticastMessageFormat.resourceToString(localResources));
+                        break;
                     case COMMIT_RESOURCES:
-                        if(wantResources) {
+                        if (mmf.sender.equals(superNode) && wantResources) {
+                            System.out.println("Received resources from supernode.");
                             System.out.println("Received all resources from supernode:");
-                            MulticastMessageFormat.stringToResource(mmf.body).forEach(System.out::println);
+                            mmf.bodyToResourcesList().forEach(System.out::println);
                         }
+                        break;
                     default:
                         System.out.println("Not expected input received:\n" + mmf);
                 }
+                System.out.println(mmf.sender);
+                System.out.println(
+                        "Is SN: " + mmf.sender.equals(superNode) + "\n" +
+                        "Isn SN: " + !mmf.sender.equals(superNode) + "\n" +
+                        "Is empty: " + superNode.isEmpty() + "\n" +
+                        "Isnt empty: " + !superNode.isEmpty() + "\n"
+                );
             } catch (Exception ignored) {
             }
             if (System.in.available() > 0) {
@@ -105,10 +112,6 @@ public class ClientNode {
         }
         controller.end();
         scanner.close();
-    }
-
-    private String convertToString(List<Resource> resources) {
-        return MulticastMessageFormat.resourceToString(resources);
     }
 
     private List<Resource> getResources() {

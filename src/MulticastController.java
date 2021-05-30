@@ -1,7 +1,9 @@
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.util.List;
 
 public class MulticastController {
     final int port;
@@ -29,15 +31,44 @@ public class MulticastController {
         socket.send(packet);
     }
 
+    public void send(String request, List<Resource> resources) throws IOException {
+        send(request, MulticastMessageFormat.resourceToString(resources));
+    }
+
     public String receive() throws IOException {
         // Read
-        byte[] entry = new byte[1024];
+        byte[] entry = new byte[16_384]; // 2^14 bytes
         DatagramPacket packet = new DatagramPacket(entry, entry.length);
         socket.setSoTimeout(100);
         socket.receive(packet);
         // Parse
         return new String(packet.getData(), 0, packet.getLength());
     }
+
+    // TODO: read big packet
+//        try {
+//            // Is big packet
+//            return receiveBigPacket(
+//                    Integer.parseInt(String.valueOf(message.charAt(0))),
+//                    entry, packet);
+//        } catch (Exception e) {
+//            // Is normal packet
+//            return message;
+//        }
+//    public String receiveBigPacket(int size, byte[] entry, DatagramPacket packet) {
+//        StringBuilder message = new StringBuilder();
+//        try {
+//            for(int i = 1; i < size; i++) {
+//                socket.receive(packet);
+//                message.append(new String(packet.getData(), i, packet.getLength()));
+//            }
+//        } catch (Exception e) {
+//            System.out.println("Exception parsing big packet");
+//            e.printStackTrace();
+//            message = new StringBuilder();
+//        }
+//        return message.toString();
+//    }
 
     public void end() throws IOException {
         socket.leaveGroup(group);

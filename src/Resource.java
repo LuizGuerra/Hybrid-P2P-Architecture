@@ -24,7 +24,15 @@ public class Resource {
 
     public static Resource parseString(String str) {
         String[] vars = str.split(";");
-        return new Resource(vars[2], vars[1], vars[0]);
+        try {
+            return new Resource(vars[2], vars[1], vars[0]);
+        } catch (Exception e) {
+            System.out.println("Found problem parsing string: " + str);
+            System.out.println("Probable cause might be that " +
+                    "receiving package is too small. Check packet header.");
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public String convertForMulticast() {

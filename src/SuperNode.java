@@ -3,26 +3,28 @@ import java.util.*;
 
 public class SuperNode {
 
+    // Node information
+    String name;
+
+    // Multicasts
+    MulticastController superNodeController;
+    MulticastController clientsNodeController;
+
     // Node communication
-    static final int superNodePort = 5000;
     static final String HELLO = "HELLO";
     static final String EXIT = "EXIT";
+    static final int superNodePort = 5000;
+    Set<String> superNodes;
+
     // Client and super node communication
     static final String CLIENT_HELLO = "CLIENT_HELLO";
     static final String CLIENT_EXIT = "CLIENT_EXIT";
     static final String CLIENT_ALIVE = "CLIENT_ALIVE";
     static final String REQUEST_RESOURCES = "REQUEST_RESOURCES";
     static final String COMMIT_RESOURCES = "COMMIT_RESOURCES";
-
-    MulticastController superNodeController;
-    MulticastController clientsNodeController;
-
-    Set<String> superNodes;
+    int clientNodesPort;
     Set<ClientInfo> clientNodes;
     List<Resource> clientResources;
-
-    String name;
-    int clientNodesPort;
 
     public SuperNode(String name, String group, int port) throws IOException {
         this.superNodeController = new MulticastController(name, group, superNodePort);
@@ -56,7 +58,7 @@ public class SuperNode {
                 askedForResources = "";
                 resourceStrings = "";
                 counter = 0;
-                System.out.println("Resources package sent.\n");
+                System.out.println("Resources package sent to all connected clients.\n");
             }
             // Read if anything arrived from supernodes
             try {
@@ -79,11 +81,9 @@ public class SuperNode {
                         superNodes.remove(mmf.sender);
                         break;
                     case REQUEST_RESOURCES:
-                        System.out.println("\nReceived super node resource request");
-                        superNodeController.send(
-                                COMMIT_RESOURCES,
-                                MulticastMessageFormat.resourceToString(clientResources)
-                        );
+                        System.out.println("\nReceived super node resource request from " + mmf.sender);
+                        superNodeController.send(COMMIT_RESOURCES, clientResources);
+                        System.out.println("Sent resources");
                         break;
                     case COMMIT_RESOURCES:
                         if(!askedForResources.isEmpty()) {
@@ -101,14 +101,14 @@ public class SuperNode {
             try {
                 String received = clientsNodeController.receive();
                 MulticastMessageFormat mmf = new MulticastMessageFormat(received);
-                if (mmf.sender.equals(name) || !containsClient(name)) {
+                if (mmf.sender.equals(name)) { //  || !containsClient(name)
                     continue;
                 }
                 switch (mmf.request) {
                     case CLIENT_HELLO:
                         System.out.println("Received client hello from " + mmf.sender);
-                        if (addClient(mmf.sender)) {
-                            clientResources.addAll(resources(mmf.body));
+                        if (clientNodes.add(new ClientInfo(mmf.sender, System.currentTimeMillis()))) {
+                            clientResources.addAll(mmf.bodyToResourcesList());
                             System.out.println("Sending back a hello");
                             clientsNodeController.send(HELLO);
                             System.out.println("Connection with " + mmf.sender + " established.");
@@ -126,20 +126,19 @@ public class SuperNode {
                         }
                         System.out.println("Client " + mmf.sender + " requested resources");
                         superNodeController.send(REQUEST_RESOURCES);
-                        System.out.println(clientResources);
                         resourceStrings = MulticastMessageFormat.resourceToString(clientResources);
                         askedForResources = mmf.sender;
                         break;
                     default:
                         System.out.println("Not expected input received:\n" + mmf);
                 }
-                // Remove client if it does not send messages after 5 seconds
-                for (ClientInfo client : clientNodes) {
-                    long currentTime = System.currentTimeMillis();
-                    if (client.lastMessageTime - currentTime > 5_000) {
-                        clientNodes.remove(client);
-                    }
-                }
+                // Remove client if it does not send 2 alive messages
+//                for (ClientInfo client : clientNodes) {
+//                    long currentTime = System.currentTimeMillis();
+//                    if (client.lastMessageTime - currentTime > 11_000) {
+//                        clientNodes.remove(client);
+//                    }
+//                }
             } catch (Exception ignored) {
             }
             if (System.in.available() > 0) {
@@ -154,10 +153,6 @@ public class SuperNode {
         scanner.close();
     }
 
-    public List<Resource> resources(String body) {
-        return MulticastMessageFormat.stringToResource(body);
-    }
-
     private void clientSentMessage(String name, long time) {
         for (ClientInfo client: clientNodes) {
             if (client.name.equals(name)) {
@@ -167,12 +162,7 @@ public class SuperNode {
     }
 
     private boolean containsClient(String name) {
-        for (ClientInfo client: clientNodes) {
-            if (client.name.equals(name)) {
-                return true;
-            }
-        }
-        return false;
+        return clientNodes.stream().anyMatch( (x) -> x.name.equals(name));
     }
 
     private boolean addClient(String name) {
@@ -201,14 +191,15 @@ public class SuperNode {
     }
 
     public static void main(String[] args) throws IOException {
-        if (args.length != 3) {
+        if (args.length != 2) {
             System.out.println("Usage: java ClientNode <name> <unique port>");
             System.out.println("<name>: user name");
             System.out.println("<unique port>: integer client communication port");
             System.exit(1);
         }
-        int clientPort = Integer.parseInt(args[2]);
-        SuperNode node = new SuperNode(args[0], "224.0.2.1", clientPort);
+        int clientPort = Integer.parseInt(args[1]);
+        String group = "224.0.2.1";
+        SuperNode node = new SuperNode(args[0], group, clientPort);
         node.run();
     }
 }

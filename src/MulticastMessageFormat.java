@@ -1,5 +1,7 @@
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 final public class MulticastMessageFormat {
@@ -23,6 +25,16 @@ final public class MulticastMessageFormat {
         originalMessage = str;
     }
 
+    public List<Resource> bodyToResourcesList() {
+        try {
+            return stringToResource(body);
+        } catch (Exception e) {
+            System.out.println("Error bruv");
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
     public static String resourceToString(List<Resource> resources) {
         String str = "";
         for(int i = 0; i < resources.size(); i++) {
@@ -38,6 +50,7 @@ final public class MulticastMessageFormat {
     public static List<Resource> stringToResource(String str) {
         return Arrays.stream(str.split(" "))
                 .map(Resource::parseString)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
