@@ -26,6 +26,7 @@ public class ClientNode {
     MulticastController controller;
     String name;
     int superNodePort;
+    boolean wantResources;
 
     Timer timer;
 
@@ -37,6 +38,7 @@ public class ClientNode {
         this.name = name;
         this.superNodePort = superNodePort;
         timer = new Timer();
+        wantResources = false;
     }
 
     class Heartbeat extends TimerTask {
@@ -68,7 +70,6 @@ public class ClientNode {
         System.out.println("Hello sent.\n");
         scanner = new Scanner(System.in);
 
-        boolean wantResources = false;
         boolean onlyWatching = false;
 
         while (true) {
@@ -108,7 +109,7 @@ public class ClientNode {
                         break;
                     case FILE_REQUEST:
                         String[] vars = mmf.body.split("\\s");
-                        if(vars[0].equals(ip)) {
+                        if(vars[0].equals(ip) && !wantResources) {
                             System.out.println("Received file request from " + mmf.sender);
                             System.out.println("File: " + vars[3]);
                             sendFile(mmf);
@@ -158,11 +159,17 @@ public class ClientNode {
                 r.ip + " " + ip + " " + 1234 + " " +  r.resourceName
         );
         ReceiveFile receiveFile = new ReceiveFile(1234);
-        receiveFile.run();
+        try {
+            receiveFile.run();
+            receiveFile.close();
+        } catch (Exception ignored) {}
+
+        wantResources = false;
     }
 
     // Body: File owner ip + destination ip + port + file name
     private void sendFile(MulticastMessageFormat mmf) throws IOException {
+        System.out.println("Attempting to send file");
         String[] vars = mmf.body.split("\\s");
         String ip = vars[1];
         Integer destinPort = Integer.parseInt(vars[2]);
@@ -174,7 +181,10 @@ public class ClientNode {
             return;
         }
         SendFile sendFile = new SendFile(ip, destinPort, filePath, true);
-        sendFile.run();
+        try {
+            sendFile.run();
+            sendFile.close();
+        } catch (Exception ignored) {}
     }
 
     private List<Resource> getResources() {

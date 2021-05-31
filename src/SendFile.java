@@ -49,21 +49,19 @@ public class SendFile implements Runnable, Closeable {
                 outputStream.close();
                 fileInputStream.close();
                 socket.close();
+                System.out.println("File sent");
                 errorOcurred = false;
             } catch (Exception e) {
                 errorOcurred = true;
                 e.printStackTrace();
+            } finally {
+//                System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
+//                        Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
+                System.gc();
+//                System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
+//                        Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
             }
-            // See how much memory was being used
-            //finally {
-            //    System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
-            //            Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
-            //    System.gc();
-            //    System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
-            //            Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
-            //}
         } while (keepTrying && errorOcurred);
-        System.out.println("File successfully sent.");
     }
 
     @Override

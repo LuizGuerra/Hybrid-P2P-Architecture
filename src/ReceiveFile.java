@@ -54,15 +54,13 @@ public class ReceiveFile implements Runnable, Closeable {
                 outputStream.close();
             } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
+//                System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
+//                        Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
+                System.gc();
+//                System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
+//                        Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
             }
-            // See how much memory was being used
-            //finally {
-            //    System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
-            //            Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
-            //    System.gc();
-            //    System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
-            //            Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
-            //}
         }
     }
 

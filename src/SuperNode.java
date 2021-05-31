@@ -168,7 +168,7 @@ public class SuperNode {
                         askedForResources = mmf.sender;
                         break;
                     case HEARTBEAT:
-                        System.out.println("\nReceived " + mmf.sender + " heartbeat");
+                        System.out.println("Received " + mmf.sender + " heartbeat");
                         updateHeartBeat(mmf.sender, mmf.bodyToTime());
                         break;
                     case FILE_REQUEST:
