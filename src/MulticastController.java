@@ -1,4 +1,3 @@
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -33,6 +32,14 @@ public class MulticastController {
 
     public void send(String request, List<Resource> resources) throws IOException {
         send(request, MulticastMessageFormat.resourceToString(resources));
+    }
+
+    public void send(MulticastMessageFormat mmf) throws IOException {
+        send(mmf.request, mmf.body);
+    }
+
+    public void send(String request, Long time) throws IOException {
+        send(request, time.toString());
     }
 
     public String receive() throws IOException {

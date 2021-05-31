@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class SuperNode {
 
@@ -23,10 +24,15 @@ public class SuperNode {
     static final String CLIENT_ALIVE = "CLIENT_ALIVE";
     static final String REQUEST_RESOURCES = "REQUEST_RESOURCES";
     static final String COMMIT_RESOURCES = "COMMIT_RESOURCES";
+    static final String HEARTBEAT = "HEARTBEAT";
+    static final String SYSTEM_EXIT = "SYSTEM_EXIT";
+    static final String FILE_REQUEST = "FILE_REQUEST";
+
     int clientNodesPort;
     Set<ClientInfo> clientNodes;
     List<Resource> clientResources;
     String clientNodeGroup = "224.0.2.2";
+    Timer timer;
 
     public SuperNode(String name, int port) throws IOException {
         this.superNodeController = new MulticastController(name, superNodeGroup, superNodePort);
@@ -36,29 +42,50 @@ public class SuperNode {
         this.clientResources = new ArrayList<>();
         this.name = name;
         this.clientNodesPort = port;
+        timer = new Timer();
+    }
+
+    class ClientIsAlive extends TimerTask {
+        @Override
+        public void run() {
+            // Remove client if it does not send 2 alive messages
+            for (ClientInfo client : clientNodes) {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - client.lastMessageTime > 11_000) {
+                    System.out.println("\nClient " + client.name + " failed to send 2 alive messages");
+                    try {
+                        clientsNodeController.send(SYSTEM_EXIT, client.name);
+                    } catch (IOException e) {
+                        System.out.println("Failed to send exit message to " + client.name);
+                    }
+                    clientNodes.remove(client);
+                    System.out.println(client.name + " was removed.");
+                }
+            }
+        }
     }
 
     public void run() throws IOException {
+        timer.schedule(new ClientIsAlive(), 5_000, 5_000);
         System.out.println("Send EXIT to exit.\n");
         System.out.println("Sending hello...");
         superNodeController.send(HELLO);
         System.out.println("Hello sent.\n");
         Scanner scanner = new Scanner(System.in);
-        String input = "";
+        String input;
 
         // Is waiting super node resources or request from other supernode
         String askedForResources = "";
-        String resourceStrings = "";
+        StringBuilder resourceStrings = new StringBuilder();
         int counter = 0;
-
 
         while (true) {
             // If can send resources back to client
             if (!askedForResources.isEmpty() && counter == superNodes.size()) {
                 System.out.println("\nReceived all resources. Sending package...");
-                clientsNodeController.send(COMMIT_RESOURCES, resourceStrings);
+                clientsNodeController.send(COMMIT_RESOURCES, resourceStrings.toString());
                 askedForResources = "";
-                resourceStrings = "";
+                resourceStrings = new StringBuilder();
                 counter = 0;
                 System.out.println("Resources package sent to all connected clients.\n");
             }
@@ -90,12 +117,16 @@ public class SuperNode {
                     case COMMIT_RESOURCES:
                         if(!askedForResources.isEmpty()) {
                             System.out.println("Received resources from super node " + mmf.sender);
-                            resourceStrings += " " + mmf.body;
+                            resourceStrings.append(" ").append(mmf.body);
                             counter++;
                         }
                         break;
+                    case FILE_REQUEST:
+                        System.out.println("Repassing file request from " + mmf.sender + ".");
+                        clientsNodeController.send(mmf);
+                        break;
                     default:
-                        System.out.println("Not expected input received:\n" + mmf);
+                        System.out.println("Not expected input received from supernodes:\n" + mmf);
                 }
             } catch (Exception ignored) {
             }
@@ -103,7 +134,12 @@ public class SuperNode {
             try {
                 String received = clientsNodeController.receive();
                 MulticastMessageFormat mmf = new MulticastMessageFormat(received);
+                // If message received was mine, exit request
                 if (mmf.sender.equals(name)) { //  || !containsClient(name)
+                    continue;
+                }
+                // If sender isnt on list and isnt saying hello, exit request
+                if(!containsClient(mmf.sender) && !mmf.request.equals(CLIENT_HELLO)) {
                     continue;
                 }
                 switch (mmf.request) {
@@ -128,19 +164,21 @@ public class SuperNode {
                         }
                         System.out.println("Client " + mmf.sender + " requested resources");
                         superNodeController.send(REQUEST_RESOURCES);
-                        resourceStrings = MulticastMessageFormat.resourceToString(clientResources);
+                        resourceStrings = new StringBuilder(MulticastMessageFormat.resourceToString(clientResources));
                         askedForResources = mmf.sender;
                         break;
+                    case HEARTBEAT:
+                        System.out.println("\nReceived " + mmf.sender + " heartbeat");
+                        updateHeartBeat(mmf.sender, mmf.bodyToTime());
+                        break;
+                    case FILE_REQUEST:
+                        System.out.println("Repassing file request from " + mmf.sender + ".");
+                        superNodeController.send(mmf);
+                        clientsNodeController.send(mmf);
+                        break;
                     default:
-                        System.out.println("Not expected input received:\n" + mmf);
+                        System.out.println("Not expected input received from clients:\n" + mmf);
                 }
-                // Remove client if it does not send 2 alive messages
-//                for (ClientInfo client : clientNodes) {
-//                    long currentTime = System.currentTimeMillis();
-//                    if (client.lastMessageTime - currentTime > 11_000) {
-//                        clientNodes.remove(client);
-//                    }
-//                }
             } catch (Exception ignored) {
             }
             if (System.in.available() > 0) {
@@ -153,6 +191,7 @@ public class SuperNode {
         }
         superNodeController.end();
         scanner.close();
+        timer.cancel();
     }
 
     private void clientSentMessage(String name, long time) {
@@ -161,6 +200,13 @@ public class SuperNode {
                 client.lastMessageTime = time;
             }
         }
+    }
+
+    private void updateHeartBeat(String name, Long time) {
+        clientNodes.stream()
+                .filter(x -> x.name.equals(name))
+                .collect(Collectors.toList())
+                .get(0).lastMessageTime = time;
     }
 
     private boolean containsClient(String name) {

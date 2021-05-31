@@ -35,6 +35,14 @@ final public class MulticastMessageFormat {
         }
     }
 
+    public Long bodyToTime() {
+        try {
+            return Long.parseLong(body);
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
     public static String resourceToString(List<Resource> resources) {
         String str = "";
         for(int i = 0; i < resources.size(); i++) {

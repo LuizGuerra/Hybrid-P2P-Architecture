@@ -11,7 +11,7 @@ public class ReceiveFile implements Runnable, Closeable {
 
     ServerSocket serverSocket;
 
-    public ReceiveFile(String ip, int port) throws IOException {
+    public ReceiveFile(int port) throws IOException {
         this.port = port;
         this.serverSocket = new ServerSocket(port);
     }
@@ -37,7 +37,9 @@ public class ReceiveFile implements Runnable, Closeable {
                 byte[] buffer = new byte[1024*8];
                 int bytesRead;
 
-                File newFile = new File(thisPath + "/"+ fileName);
+                File downloadPath = new File(thisPath + "/downloads/");
+                File newFile = new File(thisPath + "/downloads/"+ fileName);
+                if(!downloadPath.exists()) { downloadPath.mkdirs(); }
                 OutputStream outputStream = new FileOutputStream(newFile);
 
                 while ( (bytesRead = inputStream.read(buffer)) != -1 ) {
@@ -52,21 +54,22 @@ public class ReceiveFile implements Runnable, Closeable {
                 outputStream.close();
             } catch (Exception e) {
                 e.printStackTrace();
-            } finally {
-                System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
-                        Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
-                System.gc();
-                System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
-                        Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
             }
+            // See how much memory was being used
+            //finally {
+            //    System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
+            //            Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
+            //    System.gc();
+            //    System.out.println("Meg used="+(Runtime.getRuntime().totalMemory()-
+            //            Runtime.getRuntime().freeMemory())/(1000*1000)+"M");
+            //}
         }
     }
 
     public static void main(String[] args) throws IOException {
         // necessary info
-        String ip = "127.0.0.1";
         int port = 1234;
-        ReceiveFile receiveFile = new ReceiveFile(ip, port);
+        ReceiveFile receiveFile = new ReceiveFile(port);
         receiveFile.run();
     }
 }

@@ -1,8 +1,8 @@
 import java.util.Objects;
 
 public class ClientInfo {
-    String name;
-    long lastMessageTime;
+    public final String name;
+    public long lastMessageTime;
 
     public ClientInfo(String name, long time) {
         this.name = name;
@@ -20,5 +20,13 @@ public class ClientInfo {
     @Override
     public int hashCode() {
         return Objects.hash(name);
+    }
+
+    @Override
+    public String toString() {
+        return "ClientInfo{" +
+                "name='" + name + '\'' +
+                ", lastMessageTime=" + lastMessageTime +
+                '}';
     }
 }

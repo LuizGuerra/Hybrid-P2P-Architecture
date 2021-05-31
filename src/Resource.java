@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.util.Objects;
 
 public class Resource {
     public final String hash;
@@ -36,9 +37,7 @@ public class Resource {
     }
 
     public String convertForMulticast() {
-        return resourceName + ";" +
-                ip + ";" +
-                hash;
+        return resourceName + ";" +  ip + ";" + hash;
     }
 
     String fileToHash(String fileName) throws Exception {
@@ -61,6 +60,19 @@ public class Resource {
             sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
         }
         return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Resource resource = (Resource) o;
+        return hash.equals(resource.hash) && resourceName.equals(resource.resourceName) && ip.equals(resource.ip);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(hash, resourceName, ip);
     }
 
     @Override
