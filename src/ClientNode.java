@@ -163,7 +163,6 @@ public class ClientNode {
             receiveFile.run();
             receiveFile.close();
         } catch (Exception ignored) {}
-
         wantResources = false;
     }
 

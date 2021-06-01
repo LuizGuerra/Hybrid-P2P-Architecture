@@ -52,33 +52,9 @@ public class MulticastController {
         return new String(packet.getData(), 0, packet.getLength());
     }
 
-    // TODO: read big packet
-//        try {
-//            // Is big packet
-//            return receiveBigPacket(
-//                    Integer.parseInt(String.valueOf(message.charAt(0))),
-//                    entry, packet);
-//        } catch (Exception e) {
-//            // Is normal packet
-//            return message;
-//        }
-//    public String receiveBigPacket(int size, byte[] entry, DatagramPacket packet) {
-//        StringBuilder message = new StringBuilder();
-//        try {
-//            for(int i = 1; i < size; i++) {
-//                socket.receive(packet);
-//                message.append(new String(packet.getData(), i, packet.getLength()));
-//            }
-//        } catch (Exception e) {
-//            System.out.println("Exception parsing big packet");
-//            e.printStackTrace();
-//            message = new StringBuilder();
-//        }
-//        return message.toString();
-//    }
-
     public void end() throws IOException {
         socket.leaveGroup(group);
         socket.close();
+        System.gc();
     }
 }

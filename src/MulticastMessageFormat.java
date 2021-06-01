@@ -11,7 +11,7 @@ final public class MulticastMessageFormat {
     public final String originalMessage;
 
     public MulticastMessageFormat(String str) {
-        String vars[] = str.split("\\s");
+        String[] vars = str.split("\\s");
         if(vars.length < 2) {
             throw new IllegalArgumentException("MulticastMessageFormat constructor bad entry:\n" + str);
         }
@@ -44,15 +44,15 @@ final public class MulticastMessageFormat {
     }
 
     public static String resourceToString(List<Resource> resources) {
-        String str = "";
+        StringBuilder str = new StringBuilder();
         for(int i = 0; i < resources.size(); i++) {
             if(i == resources.size() - 1) {
-                str += resources.get(i).convertForMulticast();
+                str.append(resources.get(i).convertForMulticast());
             } else {
-                str += resources.get(i).convertForMulticast() + " ";
+                str.append(resources.get(i).convertForMulticast()).append(" ");
             }
         }
-        return str;
+        return str.toString();
     }
 
     public static List<Resource> stringToResource(String str) {
